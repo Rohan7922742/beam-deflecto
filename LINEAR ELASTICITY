@@ -1,0 +1,59 @@
+from fenics import *
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+L = 1.0            
+E = 200e9           
+I = 1e-6            
+q_val = -1000.0     
+
+
+n_elements = 50
+mesh = IntervalMesh(n_elements, 0, L)
+
+V = FunctionSpace(mesh, "CG", 2)
+
+
+def left(x, on_boundary):
+    return near(x[0], 0.0)
+
+bc = DirichletBC(V, Constant(0.0), left)
+
+w = TrialFunction(V)
+v = TestFunction(V)
+
+q = Constant(q_val)
+
+# Weak form: ∫ EI w'' v'' dx = ∫ q v dx
+a = E*I*dot(grad(grad(w)), grad(grad(v)))*dx
+L_form = q*v*dx
+
+w_sol = Function(V)
+solve(a == L_form, w_sol, bc)
+
+
+plt.figure()
+plot(w_sol)
+plt.xlabel("Beam length (m)")
+plt.ylabel("Deflection (m)")
+plt.title("Cantilever Beam Deflection (FEniCS)")
+plt.grid()
+plt.show()
+
+
+x = np.linspace(0, L, 200)
+w_analytical = (q_val * x**2 * (6*L**2 - 4*L*x + x**2)) / (24 * E * I)
+
+
+w_fenics = np.array([w_sol(Point(xi)) for xi in x])
+
+plt.figure()
+plt.plot(x, w_analytical, 'r-', label="Analytical")
+plt.plot(x, w_fenics, 'b--', label="FEniCS FEM")
+plt.xlabel("Beam length (m)")
+plt.ylabel("Deflection (m)")
+plt.title("Beam Deflection: Analytical vs FEniCS FEM")
+plt.legend()
+plt.grid()
+plt.show()
